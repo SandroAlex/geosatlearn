@@ -1,0 +1,48 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+	"name": "Satellite",
+	
+	// Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"dockerComposeFile": "docker-compose.yml",
+
+	// The name of the service VS Code should connect to once running.
+	"service": "geosatlearn_service",
+
+	// Sets the default path that VS Code should open when connecting to the container.
+	"workspaceFolder": "/geosatlearn_app",
+	
+	// Configure tool-specific properties.
+	"customizations": {
+		
+		// Configure properties specific to VS Code.
+		"vscode": {
+			"settings": {
+				"terminal.integrated.shell.linux": "/bin/bash"
+			},
+
+			// Extensions that should be installed inside the container when it is created.
+			"extensions": [
+				"ms-azuretools.vscode-docker",
+				"ms-python.python",
+				"ms-toolsai.jupyter",
+				"mutantdino.resourcemonitor"
+			]
+		}
+	},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+ 	"forwardPorts": ["8888"],
+	
+	// Use 'portsAttributes' to set default properties for specific forwarded ports. 
+	// More info: https://containers.dev/implementors/json_reference/#port-attributes
+	"portsAttributes": {
+		"5000": {
+			"label": "Remote World",
+			"onAutoForward": "notify"
+		}
+	},
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "bash /geosatlearn_app/.devcontainer/post_create_commands.sh"
+}

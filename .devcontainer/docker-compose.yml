@@ -1,0 +1,16 @@
+version: "3.7"
+
+services:
+    geosatlearn_service:
+        image: geosatlearn_image:latest  
+        container_name: geosatlearn_container  
+        build:
+            context: ..
+            dockerfile: .devcontainer/Dockerfile
+            shm_size: "4gb" # When building.
+        shm_size: "4gb"     # When running.
+        volumes:
+            - ..:/geosatlearn_app/
+        # user: alex
+        hostname: container
+        command: sleep infinity

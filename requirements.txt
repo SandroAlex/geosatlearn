@@ -1,0 +1,5 @@
+matplotlib
+stackstac
+pystac_client
+planetary_computer
+eo-learn
