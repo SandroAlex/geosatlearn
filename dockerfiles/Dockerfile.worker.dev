@@ -1,0 +1,75 @@
+# Debian GNU/Linux 12 (bookworm) with Python 3.12.0.
+FROM python:3.12.0-slim-bookworm
+
+# Create a directory for the application.
+RUN mkdir -p /geosatlearn_app
+
+# Set working directory.
+WORKDIR /geosatlearn_app
+
+# Include requirements.txt.
+COPY ../requirements/requirements.worker.dev.txt /geosatlearn_app/requirements/requirements.worker.dev.txt
+
+# Prevents Python from writing pyc files to disc (equivalent to python -B option).
+ENV PYTHONDONTWRITEBYTECODE 1
+
+# Prevents Python from buffering stdout and stderr (equivalent to python -u option).
+ENV PYTHONUNBUFFERED 1
+
+# Ignore warning message from pip when installing packages as root.
+ENV PIP_ROOT_USER_ACTION=ignore
+
+# GDAL variables. See the following link.
+# https://mothergeo-py.readthedocs.io/en/latest/development/how-to/gdal-ubuntu-pkg.html
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
+
+# Install main dependencies.
+RUN apt-get update --yes && \
+    apt-get install --yes \
+    # Operational system dependencies.
+    python3-dev \
+    unzip \
+    curl \
+    wget \
+    make \
+    vim \
+    vim-gtk3 \
+    gcc \
+    g++ \
+    netcat-traditional \
+    postgresql \
+    wget && \
+    # Install latest gdal in debian.
+    echo "deb http://deb.debian.org/debian/ unstable main contrib non-free" | tee -a /etc/apt/sources.list && \
+    apt-get update --yes && \
+    apt-get install --yes --target-release unstable gdal-bin libgdal-dev python3-gdal && \
+    # Cleaning up unused files.
+    # This folder contains cached package lists used by apt-get, and once the packages are installed, 
+    # these lists are no longer needed. Removing them helps to keep the image smaller and more efficient.
+    rm -rf /var/lib/apt/lists/*
+
+# Install python requirements.
+RUN pip3 install --upgrade pip && \
+    # Pytorch.
+    pip3 install --index-url https://download.pytorch.org/whl/cpu \
+    torch==2.5.1+cpu \
+    torchaudio==2.5.1+cpu \
+    torchvision==0.20.1+cpu && \
+    # GDAL!
+    pip3 install GDAL==$(gdal-config --version) && \
+    # Remaining requirements.
+    pip3 install -r /geosatlearn_app/requirements/requirements.worker.dev.txt
+
+# One line installation of zsh.
+# https://github.com/deluan/zsh-in-docker
+RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v1.2.1/zsh-in-docker.sh)"
+
+# ZSH is now the default shell.
+SHELL ["/usr/bin/zsh", "-c"]
+
+# Copy entrypoint script.
+COPY ../scripts/start_worker_service.sh /geosatlearn_app/scripts/start_worker_service.sh
+
+# Configures the container to be run as an executable.
+ENTRYPOINT ["/geosatlearn_app/scripts/start_worker_service.sh"]

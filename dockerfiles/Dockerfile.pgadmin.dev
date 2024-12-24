@@ -1,0 +1,8 @@
+# Pgadmin4 container for development purposes.
+FROM dpage/pgadmin4:latest
+
+# Copy entrypoint script.
+COPY ../scripts/start_pgadmin_service.sh /usr/local/bin/entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
