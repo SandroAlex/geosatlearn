@@ -1,0 +1,100 @@
+# Keep in mind that this version does not directly relate back to the version of Docker Compose installed.
+# It simply specifies the file format that you want to use.
+version: "3.8"
+
+# Microservices configuration.
+services:
+
+  # RabbitMQ broker service.
+  broker-service:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.rabbitmq.dev
+    hostname: broker-host
+    ports:
+      - ${RABBITMQ_PORT}:5672
+      - ${RABBITMQ_PORT_UI}:15672
+
+  # Postgres database server.
+  db-service:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.postgres.dev
+    hostname: db-host
+    expose:
+      - ${DATABASE_PORT}
+    environment:
+      - POSTGRES_DB=${DATABASE_NAME}
+      - POSTGRES_USER=${DATABASE_USER}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+    volumes:
+      - ./databases/postgres:/var/lib/postgresql/data/
+
+  # Database administration.
+  pgadmin-service:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.pgadmin.dev
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_PORT=${DATABASE_PORT}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+    ports:
+      - ${PGADMIN_PORT}:80
+    depends_on:
+      - db-service
+
+  # FastAPI web tool service.
+  web-service:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.fastapi.dev
+    hostname: web-host
+    ports:
+      - ${APP_PORT}:8000
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - BROKER_URL=${BROKER_URL}
+    volumes:
+      - .:/geosatlearn_app
+    depends_on:
+      - db-service
+      - broker-service
+
+  # Hard worker service with GPU support.
+  worker-service-gpu:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/Dockerfile.worker-gpu.dev
+    hostname: worker-host
+    ports:
+      - ${JUPYTER_EXTERNAL_PORT}:8888
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - BROKER_URL=${BROKER_URL}
+      - NASA_MACHINE=${NASA_MACHINE}
+      - NASA_USERNAME=${NASA_USERNAME}
+      - NASA_PASSWORD=${NASA_PASSWORD}
+      - EARTHENGINE_TOKEN=${EARTHENGINE_TOKEN}
+      - GEE_KEY_PATH=${GEE_KEY_PATH}
+      - GEE_PROJECT=${GEE_PROJECT}
+    volumes:
+      - .:/geosatlearn_app
+    depends_on:
+      - db-service
+      - broker-service
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+networks:
+  default:
+    name: geosatlearn-network

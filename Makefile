@@ -4,9 +4,20 @@ PROJECT_NAME="geosatlearn-project"
 # Environment used in building API: development (true) or production (false).
 DEVELOPMENT=true
 
+# Environment used in building API: with gpu support (true) or without gpu support (false).
+USE_GPUS=false
+
 # Select development or production docker compose file.
 ifeq ($(DEVELOPMENT),true)
-	COMPOSE_FILE="docker-compose.dev.yml"
+	ifeq ($(USE_GPUS),true)
+		# Development environment with gpu support.
+		COMPOSE_FILE="docker-compose-gpu.dev.yml"
+		WORKER_SERVICE="worker-service-gpu"
+	else
+		# Development environment without gpu support.
+		COMPOSE_FILE="docker-compose.dev.yml"
+		WORKER_SERVICE="worker-service"
+	endif
 else
 	# Not implemented yet.
 	COMPOSE_FILE="docker-compose.yml"
@@ -43,5 +54,5 @@ docker-debug-web-service:
 
 # Run jupyterlab on web service.
 docker-exec-jupyterlab:
-	docker-compose --file ${COMPOSE_FILE} --project-name ${PROJECT_NAME} exec worker-service sh -c "jupyter-lab --allow-root --ip 0.0.0.0" ;
+	docker-compose --file ${COMPOSE_FILE} --project-name ${PROJECT_NAME} exec ${WORKER_SERVICE} sh -c "jupyter-lab --allow-root --ip 0.0.0.0" ;
 #####################################################################
