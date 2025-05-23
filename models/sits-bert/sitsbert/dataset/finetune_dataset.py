@@ -1,9 +1,7 @@
 # Initial setup.
-
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-
 
 class FinetuneDataset(Dataset):
     """
@@ -27,6 +25,8 @@ class FinetuneDataset(Dataset):
         seq_len : int
             Padded sequence length for each sample.
         """
+        
+        # Main parameters.
         self.seq_len: int = seq_len
         self.dimension: int = feature_num
 

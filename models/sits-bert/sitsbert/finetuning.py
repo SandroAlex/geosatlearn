@@ -56,7 +56,7 @@ def Config():
         "--num_features",
         default=10,
         type=int,
-        help="",
+        help="Number of satellite bands used as input features.",
     )
     parser.add_argument(
         "--num_classes",
