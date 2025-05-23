@@ -13,4 +13,3 @@ python finetuning.py \
     --attn_heads 8 \
     --learning_rate 2e-4 \
     --dropout 0.1
-
