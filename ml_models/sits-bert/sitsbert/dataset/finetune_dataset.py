@@ -1,3 +1,49 @@
+"""
+finetune_dataset.py
+===================
+
+This module defines the `FineTuneDataset` class, which is a PyTorch Dataset
+designed for fine-tuning the SITS-BERT model. The dataset processes time
+series data into sequences of features, masks, and labels suitable for
+training and evaluation.
+
+The dataset expects input data in a CSV format, where each row corresponds
+to a single time series sample. Each sample contains:
+- Band reflectance values for multiple time steps.
+- Day of year for each time step.
+- A class label indicating the target category.
+
+The `FineTuneDataset` class handles:
+- Loading and parsing the input data file.
+- Scaling band reflectance values using a configurable scale factor.
+- Padding or truncating time series to a fixed sequence length.
+- Generating masks to indicate valid time steps.
+- Returning data in a format compatible with the SITS-BERT model.
+
+Classes
+-------
+FineTuneDataset : torch.utils.data.Dataset
+    A dataset class for fine-tuning the SITS-BERT model.
+
+Usage
+-----
+Example usage of the `FineTuneDataset` class:
+
+>>> from finetune_dataset import FineTuneDataset
+>>> dataset = FineTuneDataset(
+...     file_path="data/train.csv",
+...     num_features=10,
+...     seq_len=64,
+...     bands_scale_factor=1/10000
+... )
+>>> sample = dataset[0]
+>>> print(sample["bert_input"].shape)  # (64, 10)
+>>> print(sample["bert_mask"].shape)  # (64,)
+>>> print(sample["class_label"].shape)  # (1,)
+>>> print(sample["time"].shape)  # (64,)
+
+"""
+
 # Initial setup.
 import numpy as np
 import torch
@@ -17,8 +63,8 @@ class FineTuneDataset(Dataset):
             file_path: str, 
             num_features: int, 
             seq_len: int, 
-            bands_scale_factor: float = 1 / 10000
-        ):
+            bands_scale_factor: float = 1.0 / 10000.0
+        ) -> None:
         """
         Initialize the FinetuneDataset.
 
@@ -31,7 +77,7 @@ class FineTuneDataset(Dataset):
         seq_len : int
             Padded sequence length for each sample.
         bands_scale_factor : float, optional
-            Scale factor for reflectance values (default is 1/10000).
+            Scale factor for reflectance values (default is 1 / 10000).
         """
         
         # Main parameters.
@@ -66,15 +112,15 @@ class FineTuneDataset(Dataset):
         Returns
         -------
         dict of str to torch.Tensor
-        Dictionary containing:
-        - 'bert_input': torch.Tensor, shape (seq_len, num_features)
-            BOA reflectances, normalized.
-        - 'bert_mask': torch.Tensor, shape (seq_len,)
-            Mask indicating valid time steps.
-        - 'class_label': torch.Tensor, shape (1,)
-            Class label for the sample.
-        - 'time': torch.Tensor, shape (seq_len,)
-            Day of year for each time step.
+            Dictionary containing:
+            - 'bert_input': torch.Tensor, shape (seq_len, num_features)
+                BOA reflectances, normalized.
+            - 'bert_mask': torch.Tensor, shape (seq_len,)
+                Mask indicating valid time steps.
+            - 'class_label': torch.Tensor, shape (1,)
+                Class label for the sample.
+            - 'time': torch.Tensor, shape (seq_len,)
+                Day of year for each time step.
         """
 
         # Read the line corresponding to the sample index.

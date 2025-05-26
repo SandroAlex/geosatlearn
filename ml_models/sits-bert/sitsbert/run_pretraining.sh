@@ -15,9 +15,3 @@ python pretraining.py \
     --decay_gamma 0.99 \
     --dropout 0.1 \
     --gradient_clipping 5.0
-
-
-
-
-
-

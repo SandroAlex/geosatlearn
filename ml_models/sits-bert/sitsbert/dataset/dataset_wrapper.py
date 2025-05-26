@@ -1,7 +1,7 @@
 import numpy as np
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
-from .pretrain_dataset import PretrainDataset
+from .pretrain_dataset import PreTrainDataset
 
 np.random.seed(0)
 

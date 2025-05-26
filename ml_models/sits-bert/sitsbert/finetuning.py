@@ -47,7 +47,12 @@ def finetune_configuration():
         required=False,
         help="The output directory where the fine-tuning checkpoints will be written.",
     )
-    parser.add_argument("--valid_rate", default=0.03, type=float, help="")
+    parser.add_argument(
+        "--valid_rate", 
+        default=0.03, 
+        type=float, 
+        help=""
+    )
     parser.add_argument(
         "--max_length",
         default=128,
@@ -153,16 +158,24 @@ if __name__ == "__main__":
         )
         print(f">>> Test dataset loaded. Number of samples: {test_dataset.TS_num}")
 
-    print("Creating Dataloader...")
+    # Parei aqui.
+    print(">>> Creating Dataloaders ...")
+    
     train_data_loader = DataLoader(
-        train_dataset, shuffle=True, batch_size=config.batch_size, drop_last=False
+        dataset=train_dataset, 
+        shuffle=True, 
+        batch_size=config.batch_size, 
+        drop_last=False
     )
     valid_data_loader = DataLoader(
-        valid_dataset, shuffle=False, batch_size=config.batch_size, drop_last=False
+        dataset=valid_dataset, 
+        shuffle=False, 
+        batch_size=config.batch_size, 
+        drop_last=False
     )
-    test_data_loader = DataLoader(
-        test_dataset, shuffle=False, batch_size=config.batch_size, drop_last=False
-    )
+    # test_data_loader = DataLoader(
+    #     test_dataset, shuffle=False, batch_size=config.batch_size, drop_last=False
+    # )
 
     print("Initialing SITS-BERT...")
     sbert = SBERT(

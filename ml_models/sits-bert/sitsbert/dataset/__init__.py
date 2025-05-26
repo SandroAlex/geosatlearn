@@ -1,4 +1,4 @@
-from .pretrain_dataset import PretrainDataset
+from .pretrain_dataset import PreTrainDataset
 from .dataset_wrapper import DataSetWrapper
 from .finetune_dataset import FineTuneDataset
 from .classification_dataset import ClassificationDataset
