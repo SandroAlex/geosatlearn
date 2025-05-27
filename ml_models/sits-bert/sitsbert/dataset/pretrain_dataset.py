@@ -32,7 +32,7 @@ Example usage of the `PreTrainDataset` class:
 >>> from pretrain_dataset import PreTrainDataset
 >>> dataset = PreTrainDataset(
 ...     file_path="data/pretrain.csv",
-...     feature_num=10,
+...     num_features=10,
 ...     seq_len=64,
 ...     bands_scale_factor=1/10000,
 ...     probability_for_masking=0.15,
@@ -59,7 +59,7 @@ class PreTrainDataset(Dataset):
     def __init__(
         self,
         file_path: str,
-        feature_num: int,
+        num_features: int,
         seq_len: int,
         bands_scale_factor: float = 1.0 / 10000.0,
         probability_for_masking: float = 0.15,
@@ -86,14 +86,14 @@ class PreTrainDataset(Dataset):
 
         # Initialize parameters.
         self.seq_len: int = seq_len
-        self.dimension: int = feature_num
+        self.dimension: int = num_features
         self.bands_scale_factor: float = bands_scale_factor
         self.probability_for_masking: float = probability_for_masking
         self.positive_noise_amplitude: float = positive_noise_amplitude
 
         # Read into memory.
         with open(file_path, "r") as ifile:
-            self.Data = ifile.readlines()
+            self.Data: list[str] = ifile.readlines()
             self.TS_num: list[str] = len(self.Data)
             print(">>> Loading data successful ...")
 
@@ -188,7 +188,7 @@ class PreTrainDataset(Dataset):
         """
 
         # Create a copy of the time series for masking.
-        ts_masking = ts.copy(deep=True)
+        ts_masking = ts.copy()
 
         # Initialize the mask.
         mask: np.array = np.zeros((self.seq_len,), dtype=int)
