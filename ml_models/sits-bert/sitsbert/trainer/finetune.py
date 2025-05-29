@@ -4,7 +4,7 @@ import numpy as np
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 # from ..model import SBERTClassification, SBERT
-from model import SBERT, SBERTClassification
+from sitsbert.model import SBERT, SBERTClassification
 
 def kappa(matrix):
     n = np.sum(matrix)

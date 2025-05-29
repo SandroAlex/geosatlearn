@@ -5,8 +5,8 @@ from torch.optim import Adam
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-# from ..model import SBERT, SBERTPrediction
-from model import SBERT, SBERTPrediction
+# from sitsbert.model import SBERT, SBERTPrediction
+from sitsbert.model import SBERT, SBERTPrediction
 
 torch.manual_seed(123)
 
