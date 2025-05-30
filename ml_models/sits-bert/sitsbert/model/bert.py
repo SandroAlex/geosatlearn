@@ -36,8 +36,9 @@ Example usage of the `SBERT` class:
 # Initial imports.
 import torch
 import torch.nn as nn
-from .transformer import TransformerBlock
+
 from .embedding import BERTEmbedding
+from .transformer import TransformerBlock
 
 
 class SBERT(nn.Module):
@@ -86,10 +87,10 @@ class SBERT(nn.Module):
         dropout : float, optional
             Dropout rate (default is 0.1).
         """
-        
-        # Initialize the parent class. 
+
+        # Initialize the parent class.
         super().__init__()
-        
+
         # Main attributes.
         self.hidden: int = hidden
         self.n_layers: int = n_layers
@@ -128,7 +129,9 @@ class SBERT(nn.Module):
             Output tensor of shape (batch_size, seq_len, hidden), containing
             contextualized feature representations.
         """
-        mask: torch.Tensor = (mask > 0).unsqueeze(1).repeat(1, x.size(1), 1).unsqueeze(1)
+        mask: torch.Tensor = (
+            (mask > 0).unsqueeze(1).repeat(1, x.size(1), 1).unsqueeze(1)
+        )
 
         x: torch.Tensor = self.embedding(input_sequence=x, doy_sequence=doy)
 

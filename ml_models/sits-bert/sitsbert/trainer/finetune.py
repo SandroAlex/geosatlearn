@@ -1,10 +1,12 @@
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 from torch.optim import Adam
 from torch.utils.data import DataLoader
+
 # from ..model import SBERTClassification, SBERT
 from sitsbert.model import SBERT, SBERTClassification
+
 
 def kappa(matrix):
     n = np.sum(matrix)
@@ -29,10 +31,17 @@ def average_accuracy(matrix):
 
 
 class SBERTFineTuner:
-    def __init__(self, sbert: SBERT, num_classes: int,
-                 train_dataloader: DataLoader, valid_dataloader: DataLoader,
-                 lr: float = 1e-4, with_cuda: bool = True,
-                 cuda_devices=None, log_freq: int = 100):
+    def __init__(
+        self,
+        sbert: SBERT,
+        num_classes: int,
+        train_dataloader: DataLoader,
+        valid_dataloader: DataLoader,
+        lr: float = 1e-4,
+        with_cuda: bool = True,
+        cuda_devices=None,
+        log_freq: int = 100,
+    ):
 
         cuda_condition = torch.cuda.is_available() and with_cuda
         self.device = torch.device("cuda" if cuda_condition else "cpu")
@@ -62,9 +71,11 @@ class SBERTFineTuner:
         for data in self.train_dataloader:
             data = {key: value.to(self.device) for key, value in data.items()}
 
-            classification = self.model(data["bert_input"].float(),
-                                        data["time"].long(),
-                                        data["bert_mask"].long())
+            classification = self.model(
+                data["bert_input"].float(),
+                data["time"].long(),
+                data["bert_mask"].long(),
+            )
 
             loss = self.criterion(classification, data["class_label"].squeeze().long())
             self.optim.zero_grad()
@@ -89,8 +100,10 @@ class SBERTFineTuner:
 
         valid_loss, valid_OA, valid_kappa = self._validate()
 
-        print("EP%d, train_OA=%.2f, train_Kappa=%.3f, validate_OA=%.2f, validate_Kappa=%.3f"
-              % (epoch, train_OA, train_kappa, valid_OA, valid_kappa))
+        print(
+            "EP%d, train_OA=%.2f, train_Kappa=%.3f, validate_OA=%.2f, validate_Kappa=%.3f"
+            % (epoch, train_OA, train_kappa, valid_OA, valid_kappa)
+        )
 
         return train_OA, train_kappa, valid_OA, valid_kappa
 
@@ -106,11 +119,15 @@ class SBERTFineTuner:
             for data in self.valid_dataloader:
                 data = {key: value.to(self.device) for key, value in data.items()}
 
-                classification = self.model(data["bert_input"].float(),
-                                            data["time"].long(),
-                                            data["bert_mask"].long())
+                classification = self.model(
+                    data["bert_input"].float(),
+                    data["time"].long(),
+                    data["bert_mask"].long(),
+                )
 
-                loss = self.criterion(classification, data["class_label"].squeeze().long())
+                loss = self.criterion(
+                    classification, data["class_label"].squeeze().long()
+                )
                 valid_loss += loss.item()
 
                 classification_result = classification.argmax(dim=-1)
@@ -142,9 +159,11 @@ class SBERTFineTuner:
             for data in data_loader:
                 data = {key: value.to(self.device) for key, value in data.items()}
 
-                result = self.model(data["bert_input"].float(),
-                                    data["time"].long(),
-                                    data["bert_mask"].long())
+                result = self.model(
+                    data["bert_input"].float(),
+                    data["time"].long(),
+                    data["bert_mask"].long(),
+                )
 
                 classification_result = result.argmax(dim=-1)
                 classification_target = data["class_label"].squeeze()
@@ -165,11 +184,14 @@ class SBERTFineTuner:
 
     def save(self, epoch, file_path):
         output_path = file_path + "checkpoint.tar"
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optim.state_dict(),
-        }, output_path)
+        torch.save(
+            {
+                "epoch": epoch,
+                "model_state_dict": self.model.state_dict(),
+                "optimizer_state_dict": self.optim.state_dict(),
+            },
+            output_path,
+        )
 
         print("EP:%d Model Saved on:" % epoch, output_path)
         return output_path
@@ -178,10 +200,10 @@ class SBERTFineTuner:
         input_path = file_path + "checkpoint.tar"
 
         checkpoint = torch.load(input_path)
-        self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.optim.load_state_dict(checkpoint['optimizer_state_dict'])
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.optim.load_state_dict(checkpoint["optimizer_state_dict"])
         self.model.train()
-        epoch = checkpoint['epoch']
+        epoch = checkpoint["epoch"]
 
         print("EP:%d Model loaded from:" % epoch, input_path)
         return input_path

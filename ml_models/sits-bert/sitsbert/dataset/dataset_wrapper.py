@@ -37,11 +37,13 @@ Example usage of the `DataSetWrapper` class:
 
 # Initial imports.
 import numpy as np
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from torch.utils.data.sampler import SubsetRandomSampler
+
 from .pretrain_dataset import PreTrainDataset
 
 np.random.seed(0)
+
 
 class DataSetWrapper:
     """
@@ -66,12 +68,13 @@ class DataSetWrapper:
     """
 
     def __init__(
-        self, 
-        batch_size: int, 
-        valid_size: float, 
-        data_path: str, 
-        num_features: int, 
-        max_length: int
+        self,
+        batch_size: int,
+        valid_size: float,
+        data_path: str,
+        num_features: int,
+        max_length: int,
+        subset_fraction: float = None,
     ) -> None:
         """
         Initialize the DataSetWrapper.
@@ -88,6 +91,10 @@ class DataSetWrapper:
             The number of features (bands) in the dataset.
         max_length : int
             The maximum sequence length for each sample.
+        subset_fraction : float, optional
+            If provided, a random subset of the dataset will be created with
+            this fraction of the total samples. Defaults to None, which means
+            the entire dataset will be used.
         """
 
         # Main attributes.
@@ -96,6 +103,7 @@ class DataSetWrapper:
         self.data_path: str = data_path
         self.num_features: int = num_features
         self.max_length: int = max_length
+        self.subset_fraction: float = subset_fraction
 
     def get_data_loaders(self) -> tuple[DataLoader, DataLoader]:
         """
@@ -110,14 +118,25 @@ class DataSetWrapper:
 
         # Instance for PreTrainDataset.
         dataset: PreTrainDataset = PreTrainDataset(
-            file_path=self.data_path, 
-            num_features=self.num_features, 
-            seq_len=self.max_length
+            file_path=self.data_path,
+            num_features=self.num_features,
+            seq_len=self.max_length,
         )
-        
+
+        # If a subset fraction is provided, create a subset of the dataset.
+        if self.subset_fraction is not None:
+
+            num_samples: int = int(len(dataset) * self.subset_fraction)
+            indices: list[int] = np.random.choice(
+                range(len(dataset)), size=num_samples, replace=False
+            )
+            dataset: PreTrainDataset = Subset(dataset=dataset, indices=indices)
+
         # Get the training and validation DataLoaders.
-        train_loader, valid_loader = self.get_train_validation_data_loaders(dataset=dataset)
-        
+        train_loader, valid_loader = self.get_train_validation_data_loaders(
+            dataset=dataset
+        )
+
         return train_loader, valid_loader
 
     def get_train_validation_data_loaders(
@@ -138,24 +157,26 @@ class DataSetWrapper:
             A tuple containing the training DataLoader and validation
             DataLoader.
         """
-        
+
         # Get the number of training samples and create indices.
         num_train: int = len(dataset)
         indices: list[int] = list(range(num_train))
-        
+
         # Shuffle the indices for random sampling.
         np.random.shuffle(indices)
 
         # Calculate the split index for validation.
         split: int = int(np.floor(self.valid_size * num_train))
-        
+
         # Print the number of training and validation samples.
-        print(f">>> Samples; Total: {num_train}; Training: {num_train - split}; Validation: {split}")
-        
+        print(
+            f">>> Samples; Total: {num_train}; Training: {num_train - split}; Validation: {split}"
+        )
+
         # Split the indices into training and validation sets.
         valid_idx: list[int] = indices[:split]
         train_idx: list[int] = indices[split:]
-        
+
         # Create samplers for training and validation. These samplers will
         # randomly sample from the respective indices.
         train_sampler: SubsetRandomSampler = SubsetRandomSampler(indices=train_idx)
@@ -163,16 +184,16 @@ class DataSetWrapper:
 
         # Create DataLoaders for training and validation datasets.
         train_loader: DataLoader = DataLoader(
-            dataset=dataset, 
-            batch_size=self.batch_size, 
-            sampler=train_sampler, 
-            drop_last=True
+            dataset=dataset,
+            batch_size=self.batch_size,
+            sampler=train_sampler,
+            drop_last=True,
         )
         valid_loader: DataLoader = DataLoader(
-            dataset=dataset, 
-            batch_size=self.batch_size, 
-            sampler=valid_sampler, 
-            drop_last=True
+            dataset=dataset,
+            batch_size=self.batch_size,
+            sampler=valid_sampler,
+            drop_last=True,
         )
 
         return train_loader, valid_loader

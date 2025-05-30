@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
+
 from .bert import SBERT
+
 
 class SBERTClassification(nn.Module):
     """

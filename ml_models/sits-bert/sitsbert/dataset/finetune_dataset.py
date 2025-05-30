@@ -49,6 +49,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+
 class FineTuneDataset(Dataset):
     """
     Fine-tuning dataset for SITS-BERT.
@@ -59,12 +60,12 @@ class FineTuneDataset(Dataset):
     """
 
     def __init__(
-            self, 
-            file_path: str, 
-            num_features: int, 
-            seq_len: int, 
-            bands_scale_factor: float = 1.0 / 10000.0
-        ) -> None:
+        self,
+        file_path: str,
+        num_features: int,
+        seq_len: int,
+        bands_scale_factor: float = 1.0 / 10000.0,
+    ) -> None:
         """
         Initialize the FinetuneDataset.
 
@@ -79,7 +80,7 @@ class FineTuneDataset(Dataset):
         bands_scale_factor : float, optional
             Scale factor for reflectance values (default is 1 / 10000).
         """
-        
+
         # Main parameters.
         self.seq_len: int = seq_len
         self.dimension: int = num_features
@@ -138,7 +139,7 @@ class FineTuneDataset(Dataset):
         # shape: (number of times steps, number of features + 1).
         # + 1 for the day of year.
         ts: np.array = np.reshape(line_data[:-1], (self.dimension + 1, -1)).T
-        
+
         # Number of time steps.
         ts_length: int = ts.shape[0]
 
@@ -148,13 +149,13 @@ class FineTuneDataset(Dataset):
 
         # BOA reflectances scaled.
         ts_origin: np.array = np.zeros((self.seq_len, self.dimension))
-        ts_origin[:ts_length, :] = self.bands_scale_factor * ts[:, :-1] 
+        ts_origin[:ts_length, :] = self.bands_scale_factor * ts[:, :-1]
 
         # Day of year.
         doy: np.array = np.zeros((self.seq_len,), dtype=int)
         doy[:ts_length] = np.squeeze(ts[:, -1])
 
-        # Fill results. 
+        # Fill results.
         # The mask is 1 for valid time steps and 0 for padding.
         output: dict = {
             "bert_input": ts_origin,

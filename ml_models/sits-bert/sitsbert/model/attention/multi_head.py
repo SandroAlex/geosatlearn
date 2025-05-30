@@ -62,28 +62,30 @@ class MultiHeadedAttention(nn.Module):
         dropout : float, optional
             Dropout rate applied to attention probabilities (default is 0.1).
         """
-        
+
         # Call the parent constructor.
         super().__init__()
-        
-        # Multihead attention takes it a step further by first mapping 
-        # Q, K, and V into different lower-dimensional feature subspaces 
-        # via different linear dense layers, and then using the results to 
+
+        # Multihead attention takes it a step further by first mapping
+        # Q, K, and V into different lower-dimensional feature subspaces
+        # via different linear dense layers, and then using the results to
         # calculate attention.
         assert d_model % h == 0, "d_model must be divisible by the number of heads!"
 
         # Set subspace dimensionality.
         self.d_k: int = d_model // h
-        
+
         # Set the number of attention heads.
         self.h: int = h
 
         # Create linear layers for query, key, and value projections (3).
-        self.linear_layers: nn.ModuleList = nn.ModuleList([nn.Linear(d_model, d_model) for _ in range(3)])
-        
+        self.linear_layers: nn.ModuleList = nn.ModuleList(
+            [nn.Linear(d_model, d_model) for _ in range(3)]
+        )
+
         # Output linear layer to combine the outputs from all heads.
         self.output_linear: nn.Linear = nn.Linear(d_model, d_model)
-        
+
         # Scaled dot product attention mechanism.
         self.attention: Attention = Attention()
 
@@ -118,18 +120,16 @@ class MultiHeadedAttention(nn.Module):
             Output tensor of shape (batch_size, seq_len, d_model), containing
             the combined attention outputs.
         """
-        
+
         # Grab the batch size from the query tensor.
         batch_size: int = query.size(0)
-
-        print(f">>> Query shape: {query.shape}, Key shape: {key.shape}, Value shape: {value.shape}")
 
         # Perform linear projections for query, key, and value.
         query, key, value = [
             l(x).view(batch_size, -1, self.h, self.d_k).transpose(1, 2)
             for l, x in zip(self.linear_layers, (query, key, value))
         ]
-        
+
         # Apply attention for each head. Mask indicating valid positions (TODO: is not working!)
         x, _ = self.attention(query, key, value, mask=mask, dropout=self.dropout)
 

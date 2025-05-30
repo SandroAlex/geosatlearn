@@ -1,6 +1,7 @@
-from torch.utils.data import Dataset
-import torch
 import numpy as np
+import torch
+from torch.utils.data import Dataset
+
 
 class ClassificationDataset(Dataset):
     def __init__(self, file_path, feature_num, seq_len):
@@ -13,7 +14,7 @@ class ClassificationDataset(Dataset):
         self.seq_len = seq_len
         self.dimension = feature_num
 
-        with open(file_path, 'r') as ifile:
+        with open(file_path, "r") as ifile:
             self.Data = ifile.readlines()
             self.TS_num = len(self.Data)
 
@@ -24,7 +25,7 @@ class ClassificationDataset(Dataset):
         line = self.Data[item]
 
         # line[-1] == '\n' should be discarded
-        line_data = line[:-1].split(',')
+        line_data = line[:-1].split(",")
         line_data = list(map(float, line_data))
         line_data = np.array(line_data, dtype=float)
 
@@ -42,12 +43,10 @@ class ClassificationDataset(Dataset):
         doy = np.zeros((self.seq_len,), dtype=int)
         doy[:ts_length] = np.squeeze(ts[:, -1])
 
-        output = {"bert_input": ts_origin,
-                  "bert_mask": bert_mask,
-                  "time": doy,
-                  }
+        output = {
+            "bert_input": ts_origin,
+            "bert_mask": bert_mask,
+            "time": doy,
+        }
 
         return {key: torch.from_numpy(value) for key, value in output.items()}
-
-
-
