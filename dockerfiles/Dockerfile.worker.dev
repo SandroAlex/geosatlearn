@@ -1,5 +1,18 @@
-# Debian GNU/Linux 12 (bookworm) with Python 3.12.0.
-FROM python:3.12.0-slim-bookworm
+# Base image for all agrilearn ecosystem (Python 3.10.12).
+FROM ubuntu:22.04
+
+# New user parameters.
+ARG USER_NAME=worker-user
+ARG USER_PASSWORD=ec2-user
+ARG USER_UID=1000
+ARG USER_GID=1000
+
+# Avoid interactive prompts during package installation.
+# This environment variable is set to noninteractive mode, which prevents any 
+# interactive prompts from appearing during package installation. This is 
+# particularly useful in Dockerfiles to ensure that the build process can run 
+# without manual intervention.
+ARG DEBIAN_FRONTEND=noninteractive
 
 # Create a directory for the application.
 RUN mkdir -p /geosatlearn_app
@@ -10,66 +23,84 @@ WORKDIR /geosatlearn_app
 # Include requirements.txt.
 COPY ../requirements/requirements.worker.dev.txt /geosatlearn_app/requirements/requirements.worker.dev.txt
 
-# Prevents Python from writing pyc files to disc (equivalent to python -B option).
-ENV PYTHONDONTWRITEBYTECODE 1
-
-# Prevents Python from buffering stdout and stderr (equivalent to python -u option).
-ENV PYTHONUNBUFFERED 1
-
-# Ignore warning message from pip when installing packages as root.
-ENV PIP_ROOT_USER_ACTION=ignore
-
-# GDAL variables. See the following link.
-# https://mothergeo-py.readthedocs.io/en/latest/development/how-to/gdal-ubuntu-pkg.html
-ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
-ENV C_INCLUDE_PATH=/usr/include/gdal
-
 # Install main dependencies.
 RUN apt-get update --yes && \
-    apt-get install --yes \
     # Operational system dependencies.
-    python3-dev \
-    unzip \
-    curl \
-    wget \
-    make \
-    vim \
-    vim-gtk3 \
-    gcc \
-    g++ \
-    netcat-traditional \
-    postgresql \
-    wget && \
-    # Install latest gdal in debian.
-    echo "deb http://deb.debian.org/debian/ unstable main contrib non-free" | tee -a /etc/apt/sources.list && \
-    apt-get update --yes && \
-    apt-get install --yes --target-release unstable gdal-bin libgdal-dev python3-gdal && \
+    apt-get install --yes --no-install-recommends \
+        sudo \
+        software-properties-common \
+        python3-dev \
+        python3-pip \
+        python-is-python3 \
+        unzip \
+        curl \
+        wget \
+        vim \
+        vim-gtk3 \
+        gcc \
+        g++ \
+        make \
+        cmake \
+        netcat-traditional \
+        postgresql \
+        wget \
+        graphviz \
+        libgomp1 \
+        libgl1 \
+        libcairo2-dev \
+        gpg-agent && \
+    # Install OS GDAL dependencies.
+    add-apt-repository ppa:ubuntugis/ppa --yes && \
+    apt-get update && apt-get install --yes \
+        python3-gdal \
+        gdal-bin \
+        libgdal-dev && \
+    # Install Python GDAL binding with the same version as the system.
+    pip3 install \
+        GDAL==$(gdal-config --version) && \
+    # Install python packages for building the worker service.
+    pip3 install --upgrade \
+        pip \
+        setuptools \
+        wheel && \
+    # Install pytorch dependencies.  
+    pip3 install --index-url https://download.pytorch.org/whl/cpu \
+        torch==2.5.1+cpu \
+        torchaudio==2.5.1+cpu \
+        torchvision==0.20.1+cpu && \
+    # Install the worker service dependencies.
+    pip3 install --no-cache-dir -r \
+        /geosatlearn_app/requirements/requirements.worker.dev.txt && \
     # Cleaning up unused files.
     # This folder contains cached package lists used by apt-get, and once the packages are installed, 
     # these lists are no longer needed. Removing them helps to keep the image smaller and more efficient.
     rm -rf /var/lib/apt/lists/*
 
-# Install python requirements.
-RUN pip3 install --upgrade pip && \
-    # Pytorch.
-    pip3 install --index-url https://download.pytorch.org/whl/cpu \
-    torch==2.5.1+cpu \
-    torchaudio==2.5.1+cpu \
-    torchvision==0.20.1+cpu && \
-    # GDAL!
-    pip3 install GDAL==$(gdal-config --version) && \
-    # Remaining requirements.
-    pip3 install -r /geosatlearn_app/requirements/requirements.worker.dev.txt
+# GDAL variables. See the following link.
+# https://mothergeo-py.readthedocs.io/en/latest/development/how-to/gdal-ubuntu-pkg.html
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal \
+    C_INCLUDE_PATH=/usr/include/gdal \
+    # Some important scripts are installed here (black, isort, etc).
+    PATH=$PATH:/home/${USER_NAME}/.local/bin
 
-# One line installation of zsh.
-# https://github.com/deluan/zsh-in-docker
-RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v1.2.1/zsh-in-docker.sh)"
-
-# ZSH is now the default shell.
-SHELL ["/usr/bin/zsh", "-c"]
+# Create the worker user with sudo privilegies.
+RUN groupadd --gid $USER_GID $USER_NAME && \
+    useradd --uid $USER_UID --gid $USER_GID --create-home $USER_NAME && \
+    echo "%sudo ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    adduser $USER_NAME sudo
 
 # Copy entrypoint script.
 COPY ../scripts/start_worker_service.sh /geosatlearn_app/scripts/start_worker_service.sh
+
+# Permissions for the entrypoint script.
+RUN chmod +x /geosatlearn_app/scripts/start_worker_service.sh && \
+    # Enable prompt color in .bashrc.
+    sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' /home/$USER_NAME/.bashrc && \
+    # Give worker user permissions for root folder.
+    chown -R $USER_NAME:$USER_NAME /geosatlearn_app
+
+# Switch to the worker user.
+USER $USER_NAME
 
 # Configures the container to be run as an executable.
 ENTRYPOINT ["/geosatlearn_app/scripts/start_worker_service.sh"]
