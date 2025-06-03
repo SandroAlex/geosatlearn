@@ -95,11 +95,8 @@ class SBERT(nn.Module):
         self.hidden: int = hidden
         self.n_layers: int = n_layers
         self.attn_heads: int = attn_heads
-
         self.feed_forward_hidden: int = hidden * 4
-
         self.embedding: BERTEmbedding = BERTEmbedding(num_features, int(hidden / 2))
-
         self.transformer_blocks: nn.ModuleList = nn.ModuleList(
             [
                 TransformerBlock(hidden, attn_heads, hidden * 4, dropout)

@@ -1,12 +1,11 @@
 import torch
 import torch.nn as nn
+# from sitsbert.model import SBERT, SBERTPrediction
+from sitsbert.model import SBERT, SBERTPrediction
 from torch.optim import Adam, lr_scheduler
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-
-# from sitsbert.model import SBERT, SBERTPrediction
-from sitsbert.model import SBERT, SBERTPrediction
 
 torch.manual_seed(123)
 

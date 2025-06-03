@@ -13,10 +13,10 @@ Examples
 --------
 >>> import torch
 >>> from sitsbert.model.embedding.position import PositionalEncoding
->>> 
+>>>
 >>> # Create positional encoding for a model with dimension 512
 >>> pos_encoder = PositionalEncoding(d_model=512)
->>> 
+>>>
 >>> # Get positional encodings for days 1, 10, and 100
 >>> days = torch.tensor([1, 10, 100])
 >>> encodings = pos_encoder(days)

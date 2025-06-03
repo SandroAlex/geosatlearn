@@ -3,7 +3,6 @@ import random
 
 import numpy as np
 import torch
-
 from dataset.dataset_wrapper import DataSetWrapper
 from sitsbert.model import SBERT
 from trainer import SBERTTrainer
@@ -42,9 +41,9 @@ def pre_training_configuration():
         "written.",
     )
     parser.add_argument(
-        "--valid_rate", 
-        default=0.03, 
-        type=float, 
+        "--valid_rate",
+        default=0.03,
+        type=float,
         help="Proportion of training data to use for validation in "
         "pre-training stage. This should be a float between 0.0 and 1.0, "
         "where 0.0 means no validation set and 1.0 means all data is used for "
@@ -130,12 +129,11 @@ def pre_training_configuration():
 
 
 if __name__ == "__main__":
-    
-    
+
     pre_training_configuration = pre_training_configuration()
 
     print(">>> Loading training and validation data sets ...")
-    
+
     # Interface for creating PyTorch DataLoaders for training and validation datasets.
     dataset = DataSetWrapper(
         batch_size=pre_training_configuration.batch_size,
@@ -149,7 +147,6 @@ if __name__ == "__main__":
     train_loader, valid_loader = dataset.get_data_loaders()
 
     print(">>> Initialing SITS-BERT ...")
-    
 
     sbert = SBERT(
         pre_training_configuration.num_features,

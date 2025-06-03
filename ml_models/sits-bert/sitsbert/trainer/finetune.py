@@ -1,11 +1,10 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.optim import Adam
-from torch.utils.data import DataLoader
-
 # from ..model import SBERTClassification, SBERT
 from sitsbert.model import SBERT, SBERTClassification
+from torch.optim import Adam
+from torch.utils.data import DataLoader
 
 
 def kappa(matrix):
