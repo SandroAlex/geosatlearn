@@ -1,11 +1,3 @@
-"""
-This module provides tools to convert geospatial long tables into xarray
-datasets, organized by satellite, time, and bands. The main class,
-`ParserLongTableAgriGEELite`, processes a GeoDataFrame with time series data
-and outputs xarray datasets for each area, saving them in Zarr or NetCDF
-format.
-"""
-
 # Initial imports.
 import os
 from typing import Dict, List
@@ -20,28 +12,17 @@ from tqdm.auto import tqdm
 from xdatastore.geometries.utils import create_area_name_from_geometry
 
 
-class LongTableAgriGEELiteToXarrayDataset:
+class WideTableAgriGEELiteToXarrayDataset:
     """
-    Parser to transform long tables into xarray datasets.
+    Parser to transform wide tables into xarray datasets.
 
-    This class converts geospatial data organized in long tabular format
+    This class converts geospatial data organized in wide tabular format
     into xarray Dataset format, organized by satellite, time, and bands.
-
-    Parameters
-    ----------
-    base_folder : str, optional
-        Base folder where datasets will be saved.
-    config_crosswalk_bands : Dict[str, list], optional
-        Dictionary mapping satellite codes to their bands.
-    verbose : bool, optional
-        If True, display progress bars.
-    save_format : str, optional
-        Format to save datasets ('zarr' or 'netcdf').
     """
 
     def __init__(
         self,
-        base_folder: str = "s3://agrilearn-xarray-datasets",
+        base_folder: str,
         config_crosswalk_bands: Dict[str, List[str]] = {
             "s1d": ["vv", "vh"],
             "s2sr": [
@@ -59,8 +40,8 @@ class LongTableAgriGEELiteToXarrayDataset:
             "l8sr": ["blue", "green", "red", "nir", "swir1", "swir2"],
             "l9sr": ["blue", "green", "red", "nir", "swir1", "swir2"],
         },
-        verbose: bool = True,
         save_format: str = "zarr",
+        verbose: bool = True,
     ) -> None:
         """
         Initialize the parser for long tables to xarray datasets.
@@ -78,8 +59,8 @@ class LongTableAgriGEELiteToXarrayDataset:
         """
         self.base_folder: str = base_folder
         self.config_crosswalk_bands: Dict[str, List[str]] = config_crosswalk_bands
-        self.verbose: bool = verbose
         self.save_format: str = save_format
+        self.verbose: bool = verbose
 
     def run(
         self,
@@ -242,9 +223,9 @@ class LongTableAgriGEELiteToXarrayDataset:
                 year=year, month=1, day=1
             ) + pd.to_timedelta(int(doy_value) - 1, unit="D")
             timestamps.append(timestamp)
-        bands_names: List[str] = self.config_crosswalk_bands[satellite_code]
+        bands_column_names: List[str] = self.config_crosswalk_bands[satellite_code]
         df_tmp: List[pd.DataFrame] = []
-        for band_name in bands_names:
+        for band_name in bands_column_names:
             bands_cols: List[str] = [
                 col for col in columns if f"{band_name}" in col.lower()
             ]
@@ -306,6 +287,289 @@ class LongTableAgriGEELiteToXarrayDataset:
             f"{start_date_year}",
             "time-series",
             f"{satellites_names}-raw.{self.save_format}",
+        )
+
+        if self.verbose:
+            print(f">>> Saving dataset to {dataset_full_path} ...")
+
+        if self.save_format == "zarr":
+            ds.to_zarr(dataset_full_path, mode="w", consolidated=True)
+
+        if self.save_format == "netcdf":
+            ds.to_netcdf(dataset_full_path, mode="w")
+
+        return dataset_full_path
+
+
+class LongTableAgriGEELiteToXarrayDataset:
+    """
+    Parser to transform long tables into xarray datasets.
+
+    This class converts geospatial data organized in long tabular format
+    into xarray Dataset format, organized by satellite, time, and bands.
+    """
+
+    def __init__(
+        self,
+        base_folder: str,
+        default_crs: int = 4326,
+        satellite_code: str = "mod250",
+        save_format: str = "zarr",
+        verbose: bool = True,
+    ) -> None:
+        """
+        Initialize the parser for long tables to xarray datasets.
+
+        Parameters
+        ----------
+        base_folder : str
+            Base folder where datasets will be saved.
+        default_crs : int, optional
+            Default CRS for output geometries (default is 4326).
+        satellite_code : str, optional
+            Satellite code for the dataset (default is "mod250").
+        save_format : str, optional
+            Format to save datasets ('zarr' or 'netcdf').
+        verbose : bool, optional
+            If True, display progress bars and messages.
+        """
+
+        # Main parameters.
+        self.base_folder: str = base_folder
+        self.default_crs: int = default_crs
+        self.satellite_code: str = satellite_code
+        self.save_format: str = save_format
+        self.verbose: bool = verbose
+
+    def run(
+        self,
+        input_geometries_gdf: gpd.GeoDataFrame,
+        input_time_series_df: pd.DataFrame,
+        start_date_column_name: str = "start_date",
+        end_date_column_name: str = "end_date",
+        bands_column_names: List[str] = ["red", "nir"],
+        ndvi_column_name: str = "ndvi",
+        timestamp_column_name: str = "timestamp",
+        index_column_name_for_geometries: str = "00_indexnum",
+        index_column_name_for_time_series: str = "indexnum",
+    ) -> gpd.GeoDataFrame:
+        """
+        Process input geometries and time series, and create xarray datasets
+        for each area.
+
+        Parameters
+        ----------
+        input_geometries_gdf : gpd.GeoDataFrame
+            GeoDataFrame containing area geometries and date columns.
+        input_time_series_df : pd.DataFrame
+            DataFrame containing time series data for all areas.
+        start_date_column_name : str, optional
+            Name of the start date column (default is "start_date").
+        end_date_column_name : str, optional
+            Name of the end date column (default is "end_date").
+        bands_column_names : List[str], optional
+            List of band column names (default is ["red", "nir"]).
+        ndvi_column_name : str, optional
+            Name of the NDVI column (default is "ndvi").
+        timestamp_column_name : str, optional
+            Name of the timestamp column (default is "timestamp").
+        index_column_name_for_geometries : str, optional
+            Name of the index column in geometries GeoDataFrame
+            (default is "00_indexnum").
+        index_column_name_for_time_series : str, optional
+            Name of the index column in time series DataFrame
+            (default is "indexnum").
+
+        Returns
+        -------
+        gpd.GeoDataFrame
+            GeoDataFrame with area geometries and dataset paths.
+        """
+        # Initialize output GeoDataFrame with geometry and date columns.
+        output_gdf: gpd.GeoDataFrame = input_geometries_gdf[
+            [
+                "geometry",
+                start_date_column_name,
+                end_date_column_name,
+                index_column_name_for_geometries,
+            ]
+        ].copy(deep=True)
+        output_gdf = output_gdf.to_crs(epsg=self.default_crs)
+
+        # Loop over all areas in the input GeoDataFrame.
+        for intidx in tqdm(
+            range(len(output_gdf)), desc=f">>> Processing input field areas ..."
+        ):
+
+            # Input area (talhao).
+            input_field_gdf: gpd.GeoDataFrame = output_gdf.iloc[[intidx]]
+
+            # Grab geometry.
+            geometry: Polygon = input_field_gdf["geometry"].values[0]
+
+            # Start date for this geometry.
+            start_date_year: str = str(
+                input_field_gdf[start_date_column_name].dt.year.values[0]
+            )
+
+            # Grab time series for this geometry.
+            idx: int = int(input_field_gdf[index_column_name_for_geometries].values[0])
+            mask: pd.Series = (
+                input_time_series_df[index_column_name_for_time_series].astype(int)
+                == idx
+            )
+            time_series: pd.DataFrame = input_time_series_df[mask].copy(deep=True)
+
+            # Create xarray Dataset from the time series.
+            ds: xr.Dataset = self._create_xarray_dataset(
+                time_series=time_series,
+                timestamp_column_name=timestamp_column_name,
+                bands_column_names=bands_column_names,
+                ndvi_column_name=ndvi_column_name,
+            )
+
+            # Save geometry in wkt format as an attribute of dataset.
+            geometry_wkt: str = geometry.wkt
+            ds.attrs["geometry"] = geometry_wkt
+
+            # Calculate area of the geometry in hectares.
+            area: float = self._calculate_area(input_field_gdf=input_field_gdf)
+
+            # Save area as an attribute of this dataset.
+            ds.attrs["surface_area_ha"] = area
+
+            # Save the dataset to disk or S3.
+            save_path: str = self._save_dataset(
+                ds=ds, geometry=geometry, start_date_year=start_date_year
+            )
+            output_gdf.at[intidx, "dataset_full_path"] = save_path
+
+            if self.verbose:
+                print(">>> Finished processing area!\n")
+
+        # Return the output GeoDataFrame with dataset paths.
+        return output_gdf
+
+    def _create_xarray_dataset(
+        self,
+        time_series: pd.DataFrame,
+        timestamp_column_name: str,
+        bands_column_names: List[str],
+        ndvi_column_name: str,
+    ) -> xr.Dataset:
+        """
+        Create an xarray Dataset from a time series DataFrame.
+
+        Parameters
+        ----------
+        time_series : pd.DataFrame
+            DataFrame containing time series data for one area.
+        timestamp_column_name : str
+            Name of the timestamp column.
+        bands_column_names : List[str]
+            List of band column names.
+        ndvi_column_name : str
+            Name of the NDVI column.
+
+        Returns
+        -------
+        xr.Dataset
+            xarray Dataset containing bands and NDVI for the area.
+        """
+        # Extract timestamps and bands values. Also extract NDVI values.
+        timestamps: np.array = pd.to_datetime(
+            time_series[timestamp_column_name], format="%Y-%m-%d"
+        ).values
+        bands_values: np.array = time_series[bands_column_names].values
+        ndvi_values: np.array = time_series[ndvi_column_name].values
+
+        # Create xarray DataArray for bands.
+        da_bands: xr.DataArray = xr.DataArray(
+            data=bands_values,
+            dims=[f"time_{self.satellite_code}", f"band_{self.satellite_code}"],
+            coords={
+                f"time_{self.satellite_code}": timestamps,
+                f"band_{self.satellite_code}": bands_column_names,
+            },
+            name=self.satellite_code,
+        )
+
+        # Create xarray DataArray for NDVI.
+        da_ndvi: xr.DataArray = xr.DataArray(
+            data=ndvi_values,
+            dims=[f"time_{self.satellite_code}"],
+            coords={f"time_{self.satellite_code}": timestamps},
+            name=f"ndvi_{self.satellite_code}",
+        )
+
+        # Join both DataArrays into a Dataset.
+        ds: xr.Dataset = xr.Dataset({da_bands.name: da_bands, da_ndvi.name: da_ndvi})
+
+        return ds
+
+    def _calculate_area(
+        self,
+        input_field_gdf: gpd.GeoDataFrame,
+        epsg_area: int = 3857,
+        scaling_factor_area: float = 1.0 / 10000.0,
+    ) -> float:
+        """
+        Calculate the area of the input field in hectares.
+
+        Parameters
+        ----------
+        input_field_gdf : geopandas.GeoDataFrame
+            GeoDataFrame containing the field geometry.
+        epsg_area : int, optional
+            EPSG code for area calculation (default is 3857).
+        scaling_factor_area : float, optional
+            Factor to convert area to hectares.
+
+        Returns
+        -------
+        float
+            Area in hectares.
+        """
+        area: float = float(
+            scaling_factor_area * input_field_gdf.to_crs(epsg_area).area.values[0]
+        )
+
+        if self.verbose:
+            print(f">>> Area of the input field: {area:.2f} hectares ...")
+
+        return area
+
+    def _save_dataset(
+        self, ds: xr.Dataset, geometry: Polygon, start_date_year: str
+    ) -> str:
+        """
+        Save the xarray Dataset to disk or S3 in Zarr or NetCDF format.
+
+        Parameters
+        ----------
+        ds : xarray.Dataset
+            Dataset to save.
+        geometry : shapely.Polygon
+            Geometry of the area (used for naming).
+        start_date_year : str
+            Year string for folder structure.
+
+        Returns
+        -------
+        str
+            Full path where the dataset was saved.
+        """
+        # Area name based on geometry bounding box.
+        area_name: str = create_area_name_from_geometry(geometry=geometry)
+
+        # Patern example:
+        # s3://agrilearn-xarray-datasets/minx_-57.796715_miny_-13.165000_maxx_-57.784700_maxy_-13.141965/2023/time-series/mod250-raw.zarr
+        dataset_full_path: str = os.path.join(
+            self.base_folder,
+            f"{area_name}",
+            f"{start_date_year}",
+            "time-series",
+            f"{self.satellite_code}-raw.{self.save_format}",
         )
 
         if self.verbose:

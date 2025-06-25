@@ -93,32 +93,32 @@ class Sentinel2Element84ToXarrayDataset:
         assets : List[str]
             List of asset names to retrieve from the STAC items.
         dtype : np.dtype
-            The NumPy data type of the output array. Default: float64. Must be 
+            The NumPy data type of the output array. Default: float64. Must be
             a data type that’s compatible with fill_value.
         fill_value : np.dtype
-            Value to fill nodata/masked pixels with. Default: np.nan. Using NaN 
-            is generally the best approach, since many functions already know 
-            how to handle/propagate NaNs, or have NaN-equivalents 
-            (dask.array.nanmean vs dask.array.mean, for example). However, NaN 
-            requires a floating-point dtype. If you know the data can be 
-            represented in a smaller data type (like uint16), using a different 
-            fill_value (like 0) and managing it yourself could save a lot of 
+            Value to fill nodata/masked pixels with. Default: np.nan. Using NaN
+            is generally the best approach, since many functions already know
+            how to handle/propagate NaNs, or have NaN-equivalents
+            (dask.array.nanmean vs dask.array.mean, for example). However, NaN
+            requires a floating-point dtype. If you know the data can be
+            represented in a smaller data type (like uint16), using a different
+            fill_value (like 0) and managing it yourself could save a lot of
             memory.
         rescale : bool
-            Whether to rescale pixel values by the scale and offset present 
-            in the raster:bands metadata for each asset. Default: True. 
-            Note that this could produce floating-point data when the original 
-            values are ints, so set dtype accordingly. Raises ValueError 
-            if the dtype specified can’t hold the data after rescaling: 
+            Whether to rescale pixel values by the scale and offset present
+            in the raster:bands metadata for each asset. Default: True.
+            Note that this could produce floating-point data when the original
+            values are ints, so set dtype accordingly. Raises ValueError
+            if the dtype specified can’t hold the data after rescaling:
             for example, if loading data with dtype=int, rescale=True where the
-            scaling factor is 1.5, the rescaled data would be floating-point, 
+            scaling factor is 1.5, the rescaled data would be floating-point,
             and couldn’t be stored as an integer.
         default_crs : int
             EPSG code for the coordinate reference system.
         save_format : str
             Format to save the datasets (default is "zarr").
         verbose : bool
-            If True, prints progress and debug information.            
+            If True, prints progress and debug information.
         """
 
         # Main parameters.
