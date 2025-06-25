@@ -56,7 +56,7 @@ class Sentinel2Element84ToXarrayDataset:
 
     def __init__(
         self,
-        base_folder: str = "s3://agrilearn-xarray-datasets",
+        base_folder: str,
         url: str = "https://earth-search.aws.element84.com/v1",
         collection: str = "sentinel-2-l2a",
         assets: List[str] = [
@@ -72,9 +72,12 @@ class Sentinel2Element84ToXarrayDataset:
             "swir22",
             "scl",
         ],
-        verbose: bool = True,
+        dtype: np.dtype = np.float64,
+        fill_value: np.dtype = np.nan,
+        rescale: bool = False,
         default_crs: int = 4326,
         save_format: str = "zarr",
+        verbose: bool = True,
     ) -> None:
         """
         Initialize the parser with configuration parameters.
@@ -89,12 +92,33 @@ class Sentinel2Element84ToXarrayDataset:
             STAC collection name.
         assets : List[str]
             List of asset names to retrieve from the STAC items.
-        verbose : bool
-            If True, prints progress and debug information.
+        dtype : np.dtype
+            The NumPy data type of the output array. Default: float64. Must be 
+            a data type that’s compatible with fill_value.
+        fill_value : np.dtype
+            Value to fill nodata/masked pixels with. Default: np.nan. Using NaN 
+            is generally the best approach, since many functions already know 
+            how to handle/propagate NaNs, or have NaN-equivalents 
+            (dask.array.nanmean vs dask.array.mean, for example). However, NaN 
+            requires a floating-point dtype. If you know the data can be 
+            represented in a smaller data type (like uint16), using a different 
+            fill_value (like 0) and managing it yourself could save a lot of 
+            memory.
+        rescale : bool
+            Whether to rescale pixel values by the scale and offset present 
+            in the raster:bands metadata for each asset. Default: True. 
+            Note that this could produce floating-point data when the original 
+            values are ints, so set dtype accordingly. Raises ValueError 
+            if the dtype specified can’t hold the data after rescaling: 
+            for example, if loading data with dtype=int, rescale=True where the
+            scaling factor is 1.5, the rescaled data would be floating-point, 
+            and couldn’t be stored as an integer.
         default_crs : int
             EPSG code for the coordinate reference system.
         save_format : str
             Format to save the datasets (default is "zarr").
+        verbose : bool
+            If True, prints progress and debug information.            
         """
 
         # Main parameters.
@@ -102,9 +126,12 @@ class Sentinel2Element84ToXarrayDataset:
         self.url: str = url
         self.collection: str = collection
         self.assets: List[str] = assets
-        self.verbose: bool = verbose
+        self.dtype: np.dtype = dtype
+        self.fill_value: np.dtype = fill_value
+        self.rescale: bool = rescale
         self.default_crs: int = default_crs
         self.save_format: str = save_format
+        self.verbose: bool = verbose
 
     def run(
         self,
@@ -302,9 +329,9 @@ class Sentinel2Element84ToXarrayDataset:
             assets=self.assets,
             bounds=(minx, miny, maxx, maxy),
             epsg=self.default_crs,
-            dtype=np.float64,
-            fill_value=np.nan,
-            rescale=True,
+            dtype=self.dtype,
+            fill_value=self.fill_value,
+            rescale=self.rescale,
         )
 
         if self.verbose:
