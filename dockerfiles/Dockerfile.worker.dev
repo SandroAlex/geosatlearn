@@ -1,4 +1,4 @@
-# Base image for all agrilearn ecosystem (Python 3.10.12).
+# Base image (Python 3.10.12).
 FROM ubuntu:22.04
 
 # New user parameters.
@@ -8,10 +8,6 @@ ARG USER_UID=1000
 ARG USER_GID=1000
 
 # Avoid interactive prompts during package installation.
-# This environment variable is set to noninteractive mode, which prevents any 
-# interactive prompts from appearing during package installation. This is 
-# particularly useful in Dockerfiles to ensure that the build process can run 
-# without manual intervention.
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Create a directory for the application.
